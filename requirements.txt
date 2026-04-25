@@ -1,0 +1,32 @@
+# Core App
+streamlit==1.35.0
+streamlit-option-menu==0.3.12
+
+# Deep Learning
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
+
+# Hugging Face Ecosystem
+transformers>=4.40.0
+diffusers>=0.27.0
+huggingface_hub>=0.23.0
+accelerate>=0.30.0
+
+# Data & Utilities
+numpy>=1.24.0
+pandas>=2.0.0
+matplotlib>=3.8.0
+Pillow>=10.0.0
+
+# Image Processing
+opencv-python>=4.9.0
+
+# Environment Management
+python-dotenv>=1.0.1
+
+# Optional (for better performance / GPU handling)
+xformers>=0.0.25 ; platform_system != "Windows"
+
+# Logging & Debugging
+loguru>=0.7.2
