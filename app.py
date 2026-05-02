@@ -90,7 +90,7 @@ def main() -> None:
             st.stop()
 
         if compare_clicked:
-            with st.spinner("Generating side-by-side comparison..."):
+            with st.spinner("Generating SDXL image comparison..."):
                 try:
                     left_params = params_for_side(params, "left")
                     right_params = params_for_side(params, "right")
@@ -103,10 +103,10 @@ def main() -> None:
 
             col_left, col_right = st.columns(2)
             with col_left:
-                render_output(left_image, f"{model.display_name} | prompt A", left_path)
+                render_output(left_image, f"{model.display_name} | image A", left_path)
             with col_right:
-                render_output(right_image, f"{model.display_name} | prompt B", right_path)
-            st.success("Comparison generated successfully.")
+                render_output(right_image, f"{model.display_name} | image B", right_path)
+            st.success("Image comparison generated successfully.")
             st.balloons()
             st.info(get_fun_fact())
             return

@@ -11,15 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class DiffusionModel(BaseGenerativeModel):
-    """Stable Diffusion text-to-image model using Hugging Face Diffusers."""
+    """SDXL text-to-image model using Hugging Face Diffusers."""
 
     def __init__(self, model_id: str | None = None):
         self.model_id = model_id or config.DEFAULT_DIFFUSION_MODEL
         super().__init__(
-            display_name=f"Stable Diffusion ({self.model_id})",
-            slug="stable-diffusion",
-            model_type="Diffusers text-to-image pipeline",
-            description="A real Diffusers Stable Diffusion pipeline loaded from Hugging Face.",
+            display_name=f"SDXL ({self.model_id})",
+            slug="sdxl",
+            model_type="Diffusers SDXL text-to-image pipeline",
+            description="A real Stable Diffusion XL pipeline loaded from Hugging Face.",
             device="auto",
         )
         self.pipe = self._load_pipeline()
@@ -50,25 +50,27 @@ class DiffusionModel(BaseGenerativeModel):
         """Load and move the Diffusers pipeline to the selected device."""
         try:
             import torch
-            from diffusers import StableDiffusionPipeline
+            from diffusers import StableDiffusionXLPipeline
         except ImportError as exc:
             raise RuntimeError(
-                "Stable Diffusion requires torch and diffusers. Install requirements.txt first."
+                "SDXL requires torch and diffusers. Install requirements.txt first."
             ) from exc
 
         self._authenticate()
         self.device = self._resolve_device(torch)
         dtype = torch.float16 if self.device == "cuda" else torch.float32
 
-        logger.info("Loading Diffusers pipeline %s on %s", self.model_id, self.device)
-        pipe = StableDiffusionPipeline.from_pretrained(
+        logger.info("Loading SDXL pipeline %s on %s", self.model_id, self.device)
+        pipe = StableDiffusionXLPipeline.from_pretrained(
             self.model_id,
             token=config.HF_TOKEN,
             torch_dtype=dtype,
         )
         pipe = pipe.to(self.device)
 
-        if self.device == "cuda":
+        if hasattr(pipe, "enable_vae_slicing"):
+            pipe.enable_vae_slicing()
+        if self.device == "cuda" and hasattr(pipe, "enable_attention_slicing"):
             pipe.enable_attention_slicing()
 
         return pipe
@@ -82,7 +84,9 @@ class DiffusionModel(BaseGenerativeModel):
         guidance_scale = float(params.get("guidance_scale", 8.0))
         guidance_scale = max(7.5, min(9.0, guidance_scale))
         steps = int(params.get("num_inference_steps", config.DIFFUSION_STEPS))
-        steps = max(30, min(40, steps))
+        steps = max(35, min(50, steps))
+        width = int(params.get("width", 1024))
+        height = int(params.get("height", 1024))
         negative_prompt = params.get("negative_prompt") or None
 
         generator = torch.Generator(device=self.device).manual_seed(seed)
@@ -91,6 +95,8 @@ class DiffusionModel(BaseGenerativeModel):
             negative_prompt=negative_prompt,
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
+            width=width,
+            height=height,
             generator=generator,
         )
         return result.images[0]

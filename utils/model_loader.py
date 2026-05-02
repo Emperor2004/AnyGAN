@@ -16,7 +16,7 @@ class ModelLoadError(RuntimeError):
     """Raised when a requested model cannot be loaded."""
 
 
-AVAILABLE_MODELS = ["Stable Diffusion"]
+AVAILABLE_MODELS = ["SDXL"]
 
 
 def _validate_hf_model_id(model_id: str) -> None:
@@ -27,11 +27,11 @@ def _validate_hf_model_id(model_id: str) -> None:
 
 
 def load_model(model_name: str, hf_model_id: str | None = None) -> DiffusionModel:
-    """Load Stable Diffusion from the default or user-provided Hugging Face repo."""
+    """Load SDXL from the default or user-provided Hugging Face repo."""
     logger.info("Loading model_name=%s hf_model_id=%s", model_name, hf_model_id)
 
     if model_name not in AVAILABLE_MODELS:
-        raise ModelLoadError(f"Unsupported model: {model_name}. Only Stable Diffusion is available.")
+        raise ModelLoadError(f"Unsupported model: {model_name}. Only SDXL is available.")
 
     model_id = None
     if hf_model_id:
@@ -47,6 +47,6 @@ def load_model(model_name: str, hf_model_id: str | None = None) -> DiffusionMode
     except Exception as exc:
         logger.exception("Failed to load Stable Diffusion model")
         raise ModelLoadError(
-            "Failed to load Stable Diffusion. Check the Hugging Face model ID, token, "
+            "Failed to load SDXL. Check the Hugging Face model ID, token, "
             "network access, and available memory."
         ) from exc

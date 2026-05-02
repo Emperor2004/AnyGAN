@@ -40,9 +40,9 @@ class Config:
     ALLOW_EXTERNAL_MODELS: bool = _env_bool("ALLOW_EXTERNAL_MODELS", True)
     DEFAULT_DIFFUSION_MODEL: str = os.getenv(
         "DEFAULT_DIFFUSION_MODEL",
-        "runwayml/stable-diffusion-v1-5",
+        "stabilityai/stable-diffusion-xl-base-1.0",
     )
-    DIFFUSION_STEPS: int = _env_int("DIFFUSION_STEPS", 35)
+    DIFFUSION_STEPS: int = _env_int("DIFFUSION_STEPS", 40)
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
 
 

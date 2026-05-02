@@ -20,7 +20,7 @@ def inject_custom_css() -> None:
 def render_app_header() -> None:
     """Render the page heading."""
     st.title("AnyGAN")
-    st.caption("Context-aware photorealistic image generation with Stable Diffusion.")
+    st.caption("Ultra-realistic, context-aware image generation with Stable Diffusion XL.")
 
 
 def model_selector(model_names: list[str]) -> tuple[str, str | None]:
@@ -30,8 +30,8 @@ def model_selector(model_names: list[str]) -> tuple[str, str | None]:
 
     hf_value = st.sidebar.text_input(
         "Optional Hugging Face model ID",
-        placeholder="runwayml/stable-diffusion-v1-5",
-        help="Paste a Diffusers-compatible repo ID or Hugging Face model URL.",
+        placeholder="stabilityai/stable-diffusion-xl-base-1.0",
+        help="Paste an SDXL-compatible Diffusers repo ID or Hugging Face model URL.",
     )
 
     return model_name, normalize_hf_model_id(hf_value)
@@ -43,11 +43,11 @@ def generation_controls() -> dict:
 
     mode = st.radio(
         "Mode",
-        ["Single image", "Side-by-side compare"],
+        ["Single image", "Image comparison"],
         horizontal=True,
         label_visibility="collapsed",
     )
-    compare_mode = mode == "Side-by-side compare"
+    compare_mode = mode == "Image comparison"
 
     style = st.selectbox("Style preset", list(STYLE_PRESETS.keys()), index=0)
 
@@ -93,9 +93,9 @@ def generation_controls() -> dict:
     with col_steps:
         num_inference_steps = st.slider(
             "Inference steps",
-            min_value=30,
-            max_value=40,
-            value=35,
+            min_value=35,
+            max_value=50,
+            value=40,
             step=1,
             help="More steps can improve detail but take longer.",
         )
@@ -125,6 +125,8 @@ def generation_controls() -> dict:
         "seed_b": seed_b,
         "guidance_scale": guidance_scale,
         "num_inference_steps": num_inference_steps,
+        "width": 1024,
+        "height": 1024,
     }
 
 
@@ -137,6 +139,8 @@ def params_for_side(params: dict, side: str) -> dict:
         "seed": params["seed"],
         "guidance_scale": params["guidance_scale"],
         "num_inference_steps": params["num_inference_steps"],
+        "width": params.get("width", 1024),
+        "height": params.get("height", 1024),
     }
     if side == "right":
         payload["prompt"] = params.get("prompt_b") or params["prompt"]
@@ -150,7 +154,7 @@ def render_model_summary(model_name: str, hf_model_id: str | None) -> None:
     with st.expander("Selected model details", expanded=False):
         st.write(f"**Model:** {model_name}")
         st.write(f"**Hugging Face ID:** {hf_model_id or 'default from .env'}")
-        st.write("**Backend:** Hugging Face Diffusers StableDiffusionPipeline")
+        st.write("**Backend:** Hugging Face Diffusers StableDiffusionXLPipeline")
 
 
 def render_output(image, caption: str, saved_path=None) -> None:
@@ -165,6 +169,6 @@ def render_sidebar_help(has_hf_token: bool = False) -> None:
     st.sidebar.divider()
     token_status = "configured" if has_hf_token else "not set"
     st.sidebar.caption(
-        "Stable Diffusion is cached after the first load. "
-        f"Hugging Face token: {token_status}. Public models may work without a token."
+        "SDXL is cached after the first load. Image comparison generates two images "
+        f"with separate prompts or seeds. Hugging Face token: {token_status}."
     )
