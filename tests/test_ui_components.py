@@ -44,6 +44,7 @@ class FakeStreamlit:
         self.subheader_calls = []
         self.write_calls = []
         self.success_calls = []
+        self.code_calls = []
 
     def markdown(self, *args, **kwargs):
         self.markdown_calls.append((args, kwargs))
@@ -60,11 +61,11 @@ class FakeStreamlit:
     def radio(self, *args, **kwargs):
         return "Side-by-side compare"
 
+    def selectbox(self, label, options, index=0):
+        return options[index]
+
     def text_area(self, label, *args, **kwargs):
         return "prompt b" if "Comparison" in label else "prompt a"
-
-    def text_input(self, *args, **kwargs):
-        return "negative"
 
     def columns(self, count):
         return [ContextValue() for _ in range(count)]
@@ -74,13 +75,20 @@ class FakeStreamlit:
             return 42
         if label == "Comparison seed":
             return 43
-        return 0.55
+        if label == "Guidance scale":
+            return 8.0
+        if label == "Inference steps":
+            return 35
+        return kwargs.get("value")
 
     def expander(self, *args, **kwargs):
         return ContextValue()
 
     def write(self, value):
         self.write_calls.append(value)
+
+    def code(self, value, language=None):
+        self.code_calls.append((value, language))
 
     def image(self, *args, **kwargs):
         self.image_args = (args, kwargs)
@@ -97,7 +105,7 @@ def test_inject_custom_css_and_header(monkeypatch):
     ui.render_app_header()
 
     assert fake_st.markdown_calls
-    assert fake_st.title_calls == ["🎨 AnyGAN"]
+    assert fake_st.title_calls == ["AnyGAN"]
     assert fake_st.caption_calls
 
 
@@ -116,17 +124,19 @@ def test_generation_controls_and_sidebar_help(monkeypatch):
     monkeypatch.setattr(ui, "st", fake_st)
 
     params = ui.generation_controls()
-    ui.render_sidebar_help()
+    ui.render_sidebar_help(has_hf_token=True)
 
-    assert params == {
-        "compare_mode": True,
-        "prompt": "prompt a",
-        "prompt_b": "prompt b",
-        "negative_prompt": "negative",
-        "seed": 42,
-        "seed_b": 43,
-        "noise": 0.55,
-    }
+    assert params["compare_mode"] is True
+    assert params["style"] == "Photorealistic"
+    assert params["prompt"] == "prompt a"
+    assert params["prompt_b"] == "prompt b"
+    assert params["negative_prompt"] == "blurry, low quality, distorted, bad anatomy, watermark, artifacts"
+    assert params["seed"] == 42
+    assert params["seed_b"] == 43
+    assert params["guidance_scale"] == 8.0
+    assert params["num_inference_steps"] == 35
+    assert "prompt a" in params["enhanced_prompt"]
+    assert fake_st.code_calls
     assert fake_st.sidebar.captions
 
 
@@ -135,13 +145,18 @@ def test_params_for_side_uses_right_prompt_and_seed():
         "prompt": "left",
         "prompt_b": "right",
         "negative_prompt": "avoid",
+        "enhanced_prompt": "enhanced left",
+        "enhanced_prompt_b": "enhanced right",
         "seed": 1,
         "seed_b": 2,
-        "noise": 0.4,
+        "guidance_scale": 8.0,
+        "num_inference_steps": 35,
     }
 
     assert ui.params_for_side(params, "left")["prompt"] == "left"
+    assert ui.params_for_side(params, "left")["enhanced_prompt"] == "enhanced left"
     assert ui.params_for_side(params, "right")["prompt"] == "right"
+    assert ui.params_for_side(params, "right")["enhanced_prompt"] == "enhanced right"
     assert ui.params_for_side(params, "right")["seed"] == 2
 
 

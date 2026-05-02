@@ -10,8 +10,11 @@ AnyGAN is a modular Streamlit playground for real AI image generation. It now us
 - Stable Diffusion-only model selection
 - Optional Hugging Face model ID or URL input
 - Prompt and negative prompt controls
+- Context-aware prompt enhancement
+- Style presets: Photorealistic, Cyberpunk, Fantasy, Anime
 - Deterministic generation with `torch.Generator.manual_seed(seed)`
-- Creativity slider mapped to guidance strength
+- Guidance scale control from 7.5 to 9.0
+- Inference step control from 30 to 40
 - Single-image generation mode
 - Side-by-side comparison mode for two prompts or two seeds
 - Cached model loading with `st.cache_resource`
@@ -36,6 +39,7 @@ AnyGAN/
     fun_facts.py
     helpers.py
     model_loader.py
+    prompt_engine.py
     ui_components.py
   tests/
   experiments/
@@ -72,7 +76,7 @@ HF_TOKEN=
 DEVICE=auto
 DEFAULT_DIFFUSION_MODEL=runwayml/stable-diffusion-v1-5
 ALLOW_EXTERNAL_MODELS=True
-DIFFUSION_STEPS=25
+DIFFUSION_STEPS=35
 SAVE_OUTPUTS=True
 OUTPUT_DIR=experiments/
 LOG_LEVEL=INFO

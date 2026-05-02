@@ -42,7 +42,7 @@ class Config:
         "DEFAULT_DIFFUSION_MODEL",
         "runwayml/stable-diffusion-v1-5",
     )
-    DIFFUSION_STEPS: int = _env_int("DIFFUSION_STEPS", 25)
+    DIFFUSION_STEPS: int = _env_int("DIFFUSION_STEPS", 35)
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
 
 

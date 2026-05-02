@@ -35,7 +35,7 @@ def test_load_hugging_face_model_id(monkeypatch):
 
 def test_load_unknown_model_raises_friendly_error():
     with pytest.raises(ModelLoadError, match="Only Stable Diffusion"):
-        load_model("DCGAN")
+        load_model("Unsupported Model")
 
 
 def test_invalid_hugging_face_model_id_is_rejected_before_loading():

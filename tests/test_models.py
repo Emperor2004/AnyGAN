@@ -22,17 +22,40 @@ def test_diffusion_model_generate_uses_pipeline(monkeypatch):
     model.device = "cpu"
     image = model.generate(
         {
-            "prompt": "hello",
+            "prompt": "raw hello",
+            "enhanced_prompt": "enhanced hello",
             "negative_prompt": "blur",
             "seed": 123,
-            "noise": 0.5,
+            "guidance_scale": 8.2,
+            "num_inference_steps": 36,
         }
     )
 
     assert image.size == (4, 4)
-    assert fake_pipe.kwargs["prompt"] == "hello"
+    assert fake_pipe.kwargs["prompt"] == "enhanced hello"
     assert fake_pipe.kwargs["negative_prompt"] == "blur"
-    assert fake_pipe.kwargs["guidance_scale"] == 7.0
+    assert fake_pipe.kwargs["guidance_scale"] == 8.2
+    assert fake_pipe.kwargs["num_inference_steps"] == 36
+
+
+def test_diffusion_generation_params_are_clamped(monkeypatch):
+    class FakeResult:
+        images = [Image.new("RGB", (4, 4))]
+
+    class FakePipe:
+        def __call__(self, **kwargs):
+            self.kwargs = kwargs
+            return FakeResult()
+
+    fake_pipe = FakePipe()
+    monkeypatch.setattr(DiffusionModel, "_load_pipeline", lambda self: fake_pipe)
+
+    model = DiffusionModel(model_id="fake/model")
+    model.device = "cpu"
+    model.generate({"prompt": "hello", "seed": 1, "guidance_scale": 99, "num_inference_steps": 99})
+
+    assert fake_pipe.kwargs["guidance_scale"] == 9.0
+    assert fake_pipe.kwargs["num_inference_steps"] == 40
 
 
 def test_diffusion_device_resolution(monkeypatch):

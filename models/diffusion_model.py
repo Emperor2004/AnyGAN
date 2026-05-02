@@ -37,6 +37,7 @@ class DiffusionModel(BaseGenerativeModel):
 
     def _authenticate(self) -> None:
         if not config.HF_TOKEN:
+            logger.info("HF_TOKEN is not set. Public models will still load if they do not require auth.")
             return
         try:
             from huggingface_hub import login
@@ -76,17 +77,19 @@ class DiffusionModel(BaseGenerativeModel):
         """Generate a deterministic image for a prompt and seed."""
         import torch
 
-        prompt = params.get("prompt") or "A colorful generative artwork"
+        prompt = params.get("enhanced_prompt") or params.get("prompt") or "A colorful generative artwork"
         seed = int(params.get("seed", 42))
-        noise = float(params.get("noise", 0.45))
-        guidance_scale = 5.0 + (noise * 4.0)
+        guidance_scale = float(params.get("guidance_scale", 8.0))
+        guidance_scale = max(7.5, min(9.0, guidance_scale))
+        steps = int(params.get("num_inference_steps", config.DIFFUSION_STEPS))
+        steps = max(30, min(40, steps))
         negative_prompt = params.get("negative_prompt") or None
 
         generator = torch.Generator(device=self.device).manual_seed(seed)
         result = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
-            num_inference_steps=config.DIFFUSION_STEPS,
+            num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
         )

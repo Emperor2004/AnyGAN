@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from utils.helpers import normalize_hf_model_id
+from utils.prompt_engine import STYLE_PRESETS, enhance_prompt, get_negative_prompt
 
 
 def inject_custom_css() -> None:
@@ -18,8 +19,8 @@ def inject_custom_css() -> None:
 
 def render_app_header() -> None:
     """Render the page heading."""
-    st.title("🎨 AnyGAN")
-    st.caption("A real AI image generation playground powered by Stable Diffusion.")
+    st.title("AnyGAN")
+    st.caption("Context-aware photorealistic image generation with Stable Diffusion.")
 
 
 def model_selector(model_names: list[str]) -> tuple[str, str | None]:
@@ -37,7 +38,7 @@ def model_selector(model_names: list[str]) -> tuple[str, str | None]:
 
 
 def generation_controls() -> dict:
-    """Render image generation controls and return normalized params."""
+    """Render generation controls and return model-ready parameters."""
     st.subheader("Controls")
 
     mode = st.radio(
@@ -48,29 +49,25 @@ def generation_controls() -> dict:
     )
     compare_mode = mode == "Side-by-side compare"
 
+    style = st.selectbox("Style preset", list(STYLE_PRESETS.keys()), index=0)
+
     prompt = st.text_area(
         "Prompt",
-        value="A cinematic neon city at sunset, reflective glass towers, ultra detailed",
+        value="a futuristic city",
         height=104,
-        help="This controls the generated image content.",
+        help="Write the core subject. AnyGAN expands it into a richer model prompt.",
     )
 
     prompt_b = ""
     if compare_mode:
         prompt_b = st.text_area(
             "Comparison prompt",
-            value="A cinematic floating garden city at sunrise, soft clouds, ultra detailed",
+            value="a futuristic city at sunrise",
             height=104,
             help="Used for the right-side comparison image.",
         )
 
-    negative_prompt = st.text_input(
-        "Negative prompt",
-        value="blurry, low quality, distorted, extra limbs, watermark",
-        help="Optional text describing what the model should avoid.",
-    )
-
-    col_seed, col_seed_b, col_noise = st.columns(3)
+    col_seed, col_seed_b = st.columns(2)
     with col_seed:
         seed = st.slider("Seed", min_value=0, max_value=999_999, value=42, step=1)
     with col_seed_b:
@@ -82,24 +79,52 @@ def generation_controls() -> dict:
             step=1,
             disabled=not compare_mode,
         )
-    with col_noise:
-        noise = st.slider(
-            "Creativity",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.55,
-            step=0.05,
-            help="Maps to Stable Diffusion guidance strength.",
+
+    col_guidance, col_steps = st.columns(2)
+    with col_guidance:
+        guidance_scale = st.slider(
+            "Guidance scale",
+            min_value=7.5,
+            max_value=9.0,
+            value=8.0,
+            step=0.1,
+            help="Higher values follow the enhanced prompt more strongly.",
         )
+    with col_steps:
+        num_inference_steps = st.slider(
+            "Inference steps",
+            min_value=30,
+            max_value=40,
+            value=35,
+            step=1,
+            help="More steps can improve detail but take longer.",
+        )
+
+    negative_prompt = get_negative_prompt()
+    enhanced_prompt = enhance_prompt(prompt, style)
+    enhanced_prompt_b = enhance_prompt(prompt_b or prompt, style)
+
+    with st.expander("Enhanced prompt transparency", expanded=True):
+        st.write("**Prompt sent to model:**")
+        st.code(enhanced_prompt, language="text")
+        if compare_mode:
+            st.write("**Comparison prompt sent to model:**")
+            st.code(enhanced_prompt_b, language="text")
+        st.write("**Negative prompt:**")
+        st.code(negative_prompt, language="text")
 
     return {
         "compare_mode": compare_mode,
+        "style": style,
         "prompt": prompt,
         "prompt_b": prompt_b,
+        "enhanced_prompt": enhanced_prompt,
+        "enhanced_prompt_b": enhanced_prompt_b,
         "negative_prompt": negative_prompt,
         "seed": seed,
         "seed_b": seed_b,
-        "noise": noise,
+        "guidance_scale": guidance_scale,
+        "num_inference_steps": num_inference_steps,
     }
 
 
@@ -107,12 +132,15 @@ def params_for_side(params: dict, side: str) -> dict:
     """Build the parameter payload for a single or comparison image."""
     payload = {
         "prompt": params["prompt"],
-        "negative_prompt": params.get("negative_prompt"),
+        "enhanced_prompt": params["enhanced_prompt"],
+        "negative_prompt": params["negative_prompt"],
         "seed": params["seed"],
-        "noise": params["noise"],
+        "guidance_scale": params["guidance_scale"],
+        "num_inference_steps": params["num_inference_steps"],
     }
     if side == "right":
         payload["prompt"] = params.get("prompt_b") or params["prompt"]
+        payload["enhanced_prompt"] = params.get("enhanced_prompt_b") or params["enhanced_prompt"]
         payload["seed"] = params.get("seed_b", params["seed"])
     return payload
 
@@ -132,10 +160,11 @@ def render_output(image, caption: str, saved_path=None) -> None:
         st.success(f"Saved to {saved_path}")
 
 
-def render_sidebar_help() -> None:
+def render_sidebar_help(has_hf_token: bool = False) -> None:
     """Render concise sidebar guidance."""
     st.sidebar.divider()
+    token_status = "configured" if has_hf_token else "not set"
     st.sidebar.caption(
-        "Only real Stable Diffusion generation is enabled. "
-        "Use comparison mode to test two prompts or seeds side by side."
+        "Stable Diffusion is cached after the first load. "
+        f"Hugging Face token: {token_status}. Public models may work without a token."
     )
