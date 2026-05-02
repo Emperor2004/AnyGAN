@@ -7,7 +7,7 @@ def model_selector():
 
     model_name = st.sidebar.selectbox(
         "Choose Model",
-        ["DCGAN", "StyleGAN", "CycleGAN", "CGAN"]
+        ["DCGAN", "StyleGAN", "CycleGAN", "CGAN", "Stable Diffusion"]
     )
 
     hf_link = st.sidebar.text_input("🔗 Hugging Face Link")
@@ -16,17 +16,20 @@ def model_selector():
 
 
 def generation_controls():
+    import streamlit as st
+
     st.subheader("🎮 Generation Controls")
 
-    col1, col2 = st.columns(2)
+    prompt = st.text_input(
+        "📝 Prompt",
+        "A futuristic city with neon lights"
+    )
 
-    with col1:
-        seed = st.slider("Seed 🎲", 0, 100, 42)
-
-    with col2:
-        noise = st.slider("Noise Level 🌪️", 0.0, 1.0, 0.5)
+    seed = st.slider("Seed 🎲", 0, 100, 42)
+    noise = st.slider("Noise Level 🌪️", 0.0, 1.0, 0.5)
 
     return {
+        "prompt": prompt,
         "seed": seed,
         "noise": noise
     }
