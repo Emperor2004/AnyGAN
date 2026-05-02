@@ -12,6 +12,7 @@ transformers>=4.40.0
 diffusers>=0.27.0
 huggingface_hub>=0.23.0
 accelerate>=0.30.0
+safetensors>=0.4.3
 
 # Data & Utilities
 numpy>=1.24.0
@@ -30,3 +31,7 @@ xformers>=0.0.25 ; platform_system != "Windows"
 
 # Logging & Debugging
 loguru>=0.7.2
+
+# Testing
+pytest>=8.0.0
+coverage>=7.5.0
