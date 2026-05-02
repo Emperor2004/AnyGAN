@@ -12,8 +12,10 @@ from utils.ui_components import (
     generation_controls,
     inject_custom_css,
     model_selector,
+    params_for_side,
     render_app_header,
     render_model_summary,
+    render_output,
     render_sidebar_help,
 )
 
@@ -23,14 +25,36 @@ logger = logging.getLogger(__name__)
 
 @st.cache_resource(show_spinner=False)
 def cached_load_model(model_name: str, hf_model_id: str | None):
-    """Cache expensive model instances across Streamlit reruns."""
+    """Cache expensive Stable Diffusion pipeline loading across Streamlit reruns."""
     return load_model(model_name=model_name, hf_model_id=hf_model_id)
+
+
+def _load_selected_model(model_name: str, hf_model_id: str | None):
+    """Load the selected model and show a friendly Streamlit error on failure."""
+    try:
+        return cached_load_model(model_name, hf_model_id)
+    except ModelLoadError as exc:
+        logger.exception("Model loading failed")
+        st.error(str(exc))
+    except Exception as exc:
+        logger.exception("Unexpected model loading error: %s", exc)
+        st.error("Unexpected model loading error. Check logs for details.")
+    return None
+
+
+def _generate_and_save(model, params: dict, label: str):
+    """Generate an image and persist it when saving is enabled."""
+    image = model.generate(params)
+    saved_path = None
+    if config.SAVE_OUTPUTS:
+        saved_path = save_output(image, config.OUTPUT_DIR, prefix=f"{model.slug}-{label}")
+    return image, saved_path
 
 
 def main() -> None:
     st.set_page_config(
         page_title=config.APP_NAME,
-        page_icon="AnyGAN",
+        page_icon="🎨",
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -38,57 +62,68 @@ def main() -> None:
     render_app_header()
 
     model_name, hf_model_id = model_selector(AVAILABLE_MODELS)
-    is_diffusion = model_name == "Stable Diffusion" or bool(hf_model_id)
-    params = generation_controls(is_diffusion=is_diffusion)
-
     render_sidebar_help()
 
-    st.subheader("Generation")
-    st.caption("Choose a model, tune the controls, and generate a fresh image.")
+    st.markdown('<div class="anygan-panel">', unsafe_allow_html=True)
+    params = generation_controls()
+    render_model_summary(model_name, hf_model_id)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    model = None
-    load_error = None
-    with st.spinner(f"Loading {hf_model_id or model_name}..."):
-        try:
-            model = cached_load_model(model_name, hf_model_id)
-            render_model_summary(model)
-        except ModelLoadError as exc:
-            load_error = str(exc)
-            logger.exception("Model loading failed")
-        except Exception as exc:
-            load_error = "Unexpected model loading error. Check logs for details."
-            logger.exception("Unexpected model loading error: %s", exc)
+    st.subheader("Output")
+    st.caption("Generated images are saved locally in the experiments folder.")
 
-    if load_error:
-        st.error(load_error)
-        st.stop()
-
-    generate = st.button(
-        "Generate image",
+    left_action, right_action = st.columns(2)
+    generate_clicked = left_action.button(
+        "✨ Generate image",
         type="primary",
         use_container_width=True,
-        disabled=model is None,
+    )
+    compare_clicked = right_action.button(
+        "🪄 Compare",
+        use_container_width=True,
+        disabled=not params["compare_mode"],
     )
 
-    if generate and model is not None:
+    if generate_clicked or compare_clicked:
+        model = None
+        with st.spinner(f"Loading {hf_model_id or config.DEFAULT_DIFFUSION_MODEL}..."):
+            model = _load_selected_model(model_name, hf_model_id)
+
+        if model is None:
+            st.stop()
+
+        if compare_clicked:
+            with st.spinner("Generating side-by-side comparison..."):
+                try:
+                    left_params = params_for_side(params, "left")
+                    right_params = params_for_side(params, "right")
+                    left_image, left_path = _generate_and_save(model, left_params, "compare-left")
+                    right_image, right_path = _generate_and_save(model, right_params, "compare-right")
+                except Exception as exc:
+                    logger.exception("Comparison generation failed: %s", exc)
+                    st.error("Comparison generation failed. Try another prompt, seed, or model ID.")
+                    st.stop()
+
+            col_left, col_right = st.columns(2)
+            with col_left:
+                render_output(left_image, f"{model.display_name} | prompt A", left_path)
+            with col_right:
+                render_output(right_image, f"{model.display_name} | prompt B", right_path)
+            st.balloons()
+            st.info(get_fun_fact())
+            return
+
         with st.spinner("Generating image..."):
             try:
-                output = model.generate(params)
+                image, saved_path = _generate_and_save(model, params_for_side(params, "left"), "single")
             except Exception as exc:
                 logger.exception("Image generation failed: %s", exc)
-                st.error("Image generation failed. Try another seed, prompt, or model.")
+                st.error("Image generation failed. Try another prompt, seed, or model ID.")
                 st.stop()
 
-        st.image(output, caption=f"{model.display_name} output", use_column_width=True)
-
-        if config.SAVE_OUTPUTS:
-            try:
-                path = save_output(output, config.OUTPUT_DIR, prefix=model.slug)
-                st.success(f"Saved image to {path}")
-            except Exception as exc:
-                logger.exception("Saving generated image failed: %s", exc)
-                st.warning("Image generated, but saving it locally failed.")
-
+        render_output(image, f"{model.display_name} output", saved_path)
+        st.success("Image generated successfully.")
+        st.balloons()
         st.info(get_fun_fact())
 
 

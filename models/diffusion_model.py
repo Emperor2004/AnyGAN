@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class DiffusionModel(BaseGenerativeModel):
+    """Stable Diffusion text-to-image model using Hugging Face Diffusers."""
+
     def __init__(self, model_id: str | None = None):
         self.model_id = model_id or config.DEFAULT_DIFFUSION_MODEL
         super().__init__(
@@ -44,6 +46,7 @@ class DiffusionModel(BaseGenerativeModel):
             logger.warning("Hugging Face login failed; continuing with token-based loading: %s", exc)
 
     def _load_pipeline(self):
+        """Load and move the Diffusers pipeline to the selected device."""
         try:
             import torch
             from diffusers import StableDiffusionPipeline
@@ -70,16 +73,19 @@ class DiffusionModel(BaseGenerativeModel):
         return pipe
 
     def generate(self, params: dict):
+        """Generate a deterministic image for a prompt and seed."""
         import torch
 
         prompt = params.get("prompt") or "A colorful generative artwork"
         seed = int(params.get("seed", 42))
         noise = float(params.get("noise", 0.45))
         guidance_scale = 5.0 + (noise * 4.0)
+        negative_prompt = params.get("negative_prompt") or None
 
         generator = torch.Generator(device=self.device).manual_seed(seed)
         result = self.pipe(
             prompt=prompt,
+            negative_prompt=negative_prompt,
             num_inference_steps=config.DIFFUSION_STEPS,
             guidance_scale=guidance_scale,
             generator=generator,

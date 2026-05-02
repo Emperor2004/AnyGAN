@@ -3,39 +3,7 @@
 from PIL import Image
 
 import models.diffusion_model as diffusion_module
-from models.cgan import CGANModel
-from models.cyclegan import CycleGANModel
-from models.dcgan import DCGANModel
 from models.diffusion_model import DiffusionModel
-from models.stylegan import StyleGANModel
-
-
-PROCEDURAL_MODELS = [DCGANModel, StyleGANModel, CycleGANModel, CGANModel]
-
-
-def test_procedural_models_generate_rgb_images():
-    params = {"seed": 42, "noise": 0.4, "prompt": "validation"}
-
-    for model_cls in PROCEDURAL_MODELS:
-        image = model_cls().generate(params)
-        assert image.size == (256, 256)
-        assert image.mode == "RGB"
-
-
-def test_procedural_models_are_deterministic_for_same_seed():
-    params = {"seed": 99, "noise": 0.25, "prompt": "same"}
-
-    for model_cls in PROCEDURAL_MODELS:
-        first = model_cls().generate(params)
-        second = model_cls().generate(params)
-        assert first.tobytes() == second.tobytes()
-
-
-def test_procedural_models_change_with_seed():
-    for model_cls in PROCEDURAL_MODELS:
-        first = model_cls().generate({"seed": 1, "noise": 0.4, "prompt": "a"})
-        second = model_cls().generate({"seed": 2, "noise": 0.4, "prompt": "a"})
-        assert first.tobytes() != second.tobytes()
 
 
 def test_diffusion_model_generate_uses_pipeline(monkeypatch):
@@ -52,10 +20,18 @@ def test_diffusion_model_generate_uses_pipeline(monkeypatch):
 
     model = DiffusionModel(model_id="fake/model")
     model.device = "cpu"
-    image = model.generate({"prompt": "hello", "seed": 123, "noise": 0.5})
+    image = model.generate(
+        {
+            "prompt": "hello",
+            "negative_prompt": "blur",
+            "seed": 123,
+            "noise": 0.5,
+        }
+    )
 
     assert image.size == (4, 4)
     assert fake_pipe.kwargs["prompt"] == "hello"
+    assert fake_pipe.kwargs["negative_prompt"] == "blur"
     assert fake_pipe.kwargs["guidance_scale"] == 7.0
 
 

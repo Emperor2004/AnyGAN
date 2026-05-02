@@ -2,24 +2,24 @@
 
 # AnyGAN
 
-AnyGAN is a modular Streamlit playground for experimenting with GAN-style image generation and Hugging Face Diffusers models.
-
-The built-in DCGAN, StyleGAN, CycleGAN, and CGAN classes are seeded procedural placeholders with a shared `generate(params)` interface. They are intentionally structured so real PyTorch GAN checkpoints can be plugged in later. Stable Diffusion and custom Hugging Face model IDs use `diffusers`.
+AnyGAN is a modular Streamlit playground for real AI image generation. It now uses Stable Diffusion through Hugging Face Diffusers instead of fake/random GAN placeholders.
 
 ## Features
 
-- Streamlit web UI with a playful custom stylesheet
-- Sidebar model selector for DCGAN, StyleGAN, CycleGAN, CGAN, and Stable Diffusion
+- Modern Streamlit UI with playful styling
+- Stable Diffusion-only model selection
 - Optional Hugging Face model ID or URL input
-- Prompt input for diffusion models
-- Seed and noise/variation sliders
-- Cached model loading via `st.cache_resource`
-- Common model class interface
-- CPU/GPU device selection through `.env`
+- Prompt and negative prompt controls
+- Deterministic generation with `torch.Generator.manual_seed(seed)`
+- Creativity slider mapped to guidance strength
+- Single-image generation mode
+- Side-by-side comparison mode for two prompts or two seeds
+- Cached model loading with `st.cache_resource`
+- CPU/GPU auto-selection through `.env`
 - Hugging Face token support
 - Basic Python logging
 - Local output saving to `experiments/`
-- Random GAN fun facts after generation
+- Fun fact and balloons after successful generation
 
 ## Project Structure
 
@@ -30,10 +30,6 @@ AnyGAN/
     styles.css
   models/
     base_model.py
-    dcgan.py
-    stylegan.py
-    cyclegan.py
-    cgan.py
     diffusion_model.py
   utils/
     config.py
@@ -41,6 +37,7 @@ AnyGAN/
     helpers.py
     model_loader.py
     ui_components.py
+  tests/
   experiments/
   requirements.txt
   .env.example
@@ -83,13 +80,28 @@ LOG_LEVEL=INFO
 
 `DEVICE=auto` uses CUDA when available and CPU otherwise.
 
-## Extending With Real GANs
+## Hugging Face Models
 
-Each built-in GAN wrapper extends `ProceduralGAN` from `models/base_model.py`. To add a real model:
+The sidebar accepts either a repo ID:
 
-1. Implement checkpoint loading in `load_checkpoint`.
-2. Replace procedural image generation with a PyTorch inference pass.
-3. Keep the public `generate(params) -> PIL.Image.Image` contract.
-4. Register the model in `utils/model_loader.py`.
+```text
+runwayml/stable-diffusion-v1-5
+```
 
-This keeps the UI independent from backend model details.
+or a full Hugging Face URL:
+
+```text
+https://huggingface.co/runwayml/stable-diffusion-v1-5
+```
+
+The model must be compatible with `StableDiffusionPipeline`.
+
+## Testing
+
+```bash
+pytest -q -p no:cacheprovider
+coverage run --source=models,utils -m pytest -q -p no:cacheprovider
+coverage report -m
+```
+
+Tests mock the heavy Stable Diffusion pipeline so validation does not download model weights.

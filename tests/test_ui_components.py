@@ -6,21 +6,11 @@ import utils.ui_components as ui
 
 
 class ContextValue:
-    def __init__(self, value=None):
-        self.value = value
-        self.writes = []
-
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc, tb):
         return False
-
-    def slider(self, *args, **kwargs):
-        return self.value
-
-    def write(self, value):
-        self.writes.append(value)
 
 
 class FakeSidebar:
@@ -53,6 +43,7 @@ class FakeStreamlit:
         self.caption_calls = []
         self.subheader_calls = []
         self.write_calls = []
+        self.success_calls = []
 
     def markdown(self, *args, **kwargs):
         self.markdown_calls.append((args, kwargs))
@@ -66,21 +57,36 @@ class FakeStreamlit:
     def subheader(self, value):
         self.subheader_calls.append(value)
 
-    def text_area(self, *args, **kwargs):
-        self.text_area_args = (args, kwargs)
-        return "prompt"
+    def radio(self, *args, **kwargs):
+        return "Side-by-side compare"
+
+    def text_area(self, label, *args, **kwargs):
+        return "prompt b" if "Comparison" in label else "prompt a"
+
+    def text_input(self, *args, **kwargs):
+        return "negative"
 
     def columns(self, count):
-        return [ContextValue(123), ContextValue(0.5)][:count]
+        return [ContextValue() for _ in range(count)]
 
-    def slider(self, *args, **kwargs):
-        return kwargs.get("value")
+    def slider(self, label, *args, **kwargs):
+        if label == "Seed":
+            return 42
+        if label == "Comparison seed":
+            return 43
+        return 0.55
 
     def expander(self, *args, **kwargs):
         return ContextValue()
 
     def write(self, value):
         self.write_calls.append(value)
+
+    def image(self, *args, **kwargs):
+        self.image_args = (args, kwargs)
+
+    def success(self, value):
+        self.success_calls.append(value)
 
 
 def test_inject_custom_css_and_header(monkeypatch):
@@ -91,7 +97,7 @@ def test_inject_custom_css_and_header(monkeypatch):
     ui.render_app_header()
 
     assert fake_st.markdown_calls
-    assert fake_st.title_calls == ["AnyGAN"]
+    assert fake_st.title_calls == ["🎨 AnyGAN"]
     assert fake_st.caption_calls
 
 
@@ -99,9 +105,9 @@ def test_model_selector_normalizes_hugging_face_url(monkeypatch):
     fake_st = FakeStreamlit()
     monkeypatch.setattr(ui, "st", fake_st)
 
-    model_name, hf_model_id = ui.model_selector(["DCGAN", "Stable Diffusion"])
+    model_name, hf_model_id = ui.model_selector(["Stable Diffusion"])
 
-    assert model_name == "DCGAN"
+    assert model_name == "Stable Diffusion"
     assert hf_model_id == "acme/demo-model"
 
 
@@ -109,23 +115,43 @@ def test_generation_controls_and_sidebar_help(monkeypatch):
     fake_st = FakeStreamlit()
     monkeypatch.setattr(ui, "st", fake_st)
 
-    params = ui.generation_controls(is_diffusion=True)
+    params = ui.generation_controls()
     ui.render_sidebar_help()
 
-    assert params == {"prompt": "prompt", "seed": 42, "noise": 0.45}
+    assert params == {
+        "compare_mode": True,
+        "prompt": "prompt a",
+        "prompt_b": "prompt b",
+        "negative_prompt": "negative",
+        "seed": 42,
+        "seed_b": 43,
+        "noise": 0.55,
+    }
     assert fake_st.sidebar.captions
 
 
-def test_render_model_summary(monkeypatch):
+def test_params_for_side_uses_right_prompt_and_seed():
+    params = {
+        "prompt": "left",
+        "prompt_b": "right",
+        "negative_prompt": "avoid",
+        "seed": 1,
+        "seed_b": 2,
+        "noise": 0.4,
+    }
+
+    assert ui.params_for_side(params, "left")["prompt"] == "left"
+    assert ui.params_for_side(params, "right")["prompt"] == "right"
+    assert ui.params_for_side(params, "right")["seed"] == 2
+
+
+def test_render_model_summary_and_output(monkeypatch):
     fake_st = FakeStreamlit()
     monkeypatch.setattr(ui, "st", fake_st)
-    model = SimpleNamespace(
-        display_name="Demo",
-        model_type="test",
-        device="cpu",
-        description="A demo model.",
-    )
+    image = SimpleNamespace()
 
-    ui.render_model_summary(model)
+    ui.render_model_summary("Stable Diffusion", "acme/demo")
+    ui.render_output(image, "caption", "experiments/image.png")
 
     assert fake_st.write_calls
+    assert fake_st.success_calls == ["Saved to experiments/image.png"]

@@ -3,13 +3,13 @@
 import random
 
 FACTS = [
-    "GANs were introduced by Ian Goodfellow and collaborators in 2014.",
-    "A GAN trains two networks together: a generator and a discriminator.",
-    "StyleGAN popularized style-based controls for high-quality image synthesis.",
-    "CycleGAN can learn image-to-image translation without paired examples.",
-    "GAN training can be unstable because the two networks are constantly adapting.",
-    "Conditional GANs guide generation with labels or other structured inputs.",
-    "Latent vectors are compact coordinates that a generator maps into images.",
+    "Stable Diffusion generates images by gradually denoising latent representations.",
+    "A fixed seed can reproduce the same image when the model and settings are unchanged.",
+    "Classifier-free guidance helps steer generated images toward the prompt.",
+    "Negative prompts describe visual traits the model should avoid.",
+    "Diffusion models usually trade speed for quality through the number of inference steps.",
+    "Latent diffusion works in a compressed image space instead of raw pixels.",
+    "Prompt wording, seed, guidance, and model checkpoint can all noticeably change the output.",
 ]
 
 

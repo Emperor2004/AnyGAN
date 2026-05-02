@@ -2,52 +2,87 @@
 
 :root {
     --anygan-accent: #ff4f7b;
-    --anygan-accent-2: #36c5f0;
+    --anygan-accent-2: #0ea5e9;
+    --anygan-accent-3: #f59e0b;
     --anygan-ink: #172033;
     --anygan-muted: #667085;
     --anygan-surface: #ffffff;
+    --anygan-border: rgba(23, 32, 51, 0.1);
 }
 
 .stApp {
     background:
-        radial-gradient(circle at 16% 8%, rgba(255, 79, 123, 0.16), transparent 30%),
-        radial-gradient(circle at 85% 18%, rgba(54, 197, 240, 0.18), transparent 28%),
-        linear-gradient(180deg, #fbfcff 0%, #f4f7fb 100%);
+        radial-gradient(circle at 12% 10%, rgba(255, 79, 123, 0.18), transparent 30%),
+        radial-gradient(circle at 86% 16%, rgba(14, 165, 233, 0.16), transparent 28%),
+        radial-gradient(circle at 56% 88%, rgba(245, 158, 11, 0.14), transparent 26%),
+        linear-gradient(180deg, #fbfcff 0%, #f3f7fb 100%);
     color: var(--anygan-ink);
+}
+
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 1180px;
 }
 
 h1 {
     color: var(--anygan-ink);
     letter-spacing: 0;
+    font-weight: 800;
 }
 
 h1::after {
     content: "";
     display: block;
-    width: 72px;
-    height: 4px;
+    width: 92px;
+    height: 5px;
     margin-top: 10px;
     border-radius: 999px;
-    background: linear-gradient(90deg, var(--anygan-accent), var(--anygan-accent-2));
+    background: linear-gradient(90deg, var(--anygan-accent), var(--anygan-accent-2), var(--anygan-accent-3));
+}
+
+h2,
+h3 {
+    letter-spacing: 0;
 }
 
 [data-testid="stSidebar"] {
-    background: rgba(255, 255, 255, 0.82);
-    border-right: 1px solid rgba(23, 32, 51, 0.08);
+    background: rgba(255, 255, 255, 0.86);
+    border-right: 1px solid var(--anygan-border);
+}
+
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+    color: var(--anygan-muted);
 }
 
 .stButton > button {
+    min-height: 44px;
     border-radius: 8px;
     font-weight: 700;
+    border: 1px solid rgba(23, 32, 51, 0.12);
+}
+
+.stButton > button[kind="primary"] {
+    background: linear-gradient(90deg, var(--anygan-accent), var(--anygan-accent-2));
+    border: 0;
 }
 
 .stTextInput input,
-.stTextArea textarea {
+.stTextArea textarea,
+[data-baseweb="select"] {
     border-radius: 8px;
 }
 
 [data-testid="stExpander"] {
     border-radius: 8px;
-    border-color: rgba(23, 32, 51, 0.1);
+    border-color: var(--anygan-border);
     background: rgba(255, 255, 255, 0.74);
+}
+
+[data-testid="stImage"] {
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--anygan-border);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 16px 48px rgba(23, 32, 51, 0.08);
 }
